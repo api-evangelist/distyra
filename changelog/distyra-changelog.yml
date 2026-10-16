@@ -1,0 +1,69 @@
+generated: '2026-10-16'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.distyra.eu/changelog
+sources:
+- https://www.distyra.eu/changelog
+entries:
+- breaking: false
+  highlights:
+  - Better merchant recognition in Spain, France and Poland. improved Spanish descriptors were skipping a pre‑pass that should have cleaned them,
+    so they came back as raw bank strings.
+  - Polish payees printed with their registered address or company form, such as a payment institution followed by its street, now reduce to the
+    payee, and Revolut currency exchanges and moves between pockets come back as internal_transfer, BLIK phone transfers as p2p_transfer.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - A missing transaction type no longer blames your bank. fixed Where a bank sent a code we could not read, the response said the bank had carried
+    no transaction‑type data at all.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'Batch results are described field by field. improved The reference for POST /v1/enrich/batch now publishes each result: the full POST /v1/enrich
+    response for that item, or the error envelope for an item that failed.'
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'A failed batch item no longer shows internal error text. fixed An item that could not be enriched (error: item_failed) carried our internal
+    error message in detail. It now carries a fixed explanation and a request_id to quote to support.'
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'A bank''s refusal is named. new When a Connect call fails because the bank refused it, the 502 upstream_error now carries bank_error_kind:
+    rate_limited, bank_timeout, bank_error, account_not_accessible or action_required.'
+  date: 2026-10
+- breaking: false
+  highlights:
+  - Retrying into a bank outage no longer uses up the day. improved After a fetch times out at the bank or gets a server error, automated fetches
+    for that connection pause for five minutes.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'New field failure_kind on failed connections. new Connections with status: error, and the connect.connection.error webhook, now carry failure_kind
+    beside failure_reason.'
+  date: 2026-10
+- breaking: false
+  highlights:
+  - More accounts keep their IBAN, and incoming payments name the payer. fixed Some banks send an account's IBAN only among its other account
+    identifiers, and we did not read it there.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'A failed connection now says why. new Connections with status: error carry a new failure_reason.'
+  date: 2026-10
+- breaking: false
+  highlights:
+  - Banks marked beta are now labelled. new data_caveats on GET /v1/connect/aspsps carries beta where the provider marks the connector as such.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - Personal accounts can be connected from the portal. new The connect screen now asks business or personal.
+  date: 2026-10
+- breaking: false
+  highlights:
+  - 'A failed connection attempt says that it is not charged. changed The portal now states it beside the connection list: an attempt that does
+    not finish is not charged.'
+  date: 2026-10
+current_version: 1.11.0
+note: Versioning scheme not explicitly stated on the page.
+docs: https://www.distyra.eu/changelog

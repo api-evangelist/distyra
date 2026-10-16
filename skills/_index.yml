@@ -1,0 +1,18 @@
+generated: '2026-10-16'
+method: generated
+generator: extract-docs-artifacts.py skills (local)
+source: openapi/distyra-openapi.json
+skills:
+- file: skills/distyra-connect-open-and-fetch-accounts.md
+  name: distyra-connect-open-and-fetch-accounts
+  api: openapi/distyra-openapi.json
+  operations:
+  - createConnection
+  - getConnection
+  - getConnectionAccounts
+- file: skills/distyra-feedback-submit-correction-and-confirmation.md
+  name: distyra-feedback-submit-correction-and-confirmation
+  api: openapi/distyra-openapi.json
+  operations:
+  - submitCorrection
+  - submitConfirmation

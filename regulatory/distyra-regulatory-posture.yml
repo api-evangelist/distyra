@@ -1,0 +1,36 @@
+generated: '2026-10-16'
+method: probed
+source: https://www.distyra.eu/privacy-policy
+signals:
+  data_subject_request:
+    evidence:
+      - source: https://www.distyra.eu/privacy-policy
+        http_status: 200
+        fetched: /tmp/distyra_privacy.html
+        quote: "Under the GDPR you have the right to access your personal data, to have it corrected or erased, to restrict or object to its processing, to data portability, and to withdraw consent where we rely on it (our current processing does not rely on consent)."
+        section: "8. Your rights"
+        note: Provides data subject rights for access, correction, erasure, restriction, objection, portability.
+  subprocessors:
+    evidence:
+      - source: https://www.distyra.eu/privacy-policy
+        http_status: 200
+        fetched: /tmp/distyra_privacy.html
+        quote: "Distyra privacy policy: what personal data we collect, why, the legal bases, how long we keep it, our EU-only sub-processors, and your rights under the GDPR."
+        section: "meta description"
+        note: Indicates use of EU-only sub‑processors.
+  data_retention:
+    evidence:
+      - source: https://www.distyra.eu/privacy-policy
+        http_status: 200
+        fetched: /tmp/distyra_privacy.html
+        quote: "We keep each category of personal data only as long we need it."
+        section: "7. How long we keep it"
+        note: General retention principle.
+  ai_transparency:
+    evidence:
+      - source: https://www.distyra.eu/privacy-policy
+        http_status: 200
+        fetched: /tmp/distyra_privacy.html
+        quote: "We do not use customer transaction data to train any AI model, including our own."
+        section: "8. Your rights"
+        note: Explicit statement of no AI training on customer data.

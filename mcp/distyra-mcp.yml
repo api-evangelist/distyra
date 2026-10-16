@@ -1,0 +1,213 @@
+generated: '2026-10-16'
+method: derived
+generator: derive-mcp-candidate.py
+source:
+- openapi/distyra-openapi.json
+status: candidate
+deployment:
+  mode: none
+  auth: unknown
+  verified: probed
+note: No MCP server was found. The pre-flight posted tools/list to /mcp on api.distyra.eu, distyra.eu; verdict absent. Candidate tools below are
+  derived from the 50 operation(s) in the provider's own OpenAPI (40 listed); they describe what a server WOULD expose, not one that exists.
+tools:
+- name: get_health
+  operationId: getHealth
+  method: GET
+  path: /v1/health
+  description: Liveness + dependency health
+- name: connect_coverage
+  operationId: connectCoverage
+  method: GET
+  path: /v1/connect/coverage
+  description: List the banks (ASPSPs) Connect covers across Europe
+- name: enrich_single
+  operationId: enrichSingle
+  method: POST
+  path: /v1/enrich
+  description: Enrich a single transaction
+- name: enrich_batch
+  operationId: enrichBatch
+  method: POST
+  path: /v1/enrich/batch
+  description: Enrich a batch of transactions
+- name: analyze_applicant
+  operationId: analyzeApplicant
+  method: POST
+  path: /v1/underwrite/analyze
+  description: Run underwriting analysis on an SMB applicant (JSON)
+- name: analyze_applicant_from_statement
+  operationId: analyzeApplicantFromStatement
+  method: POST
+  path: /v1/underwrite/analyze/statement
+  description: Run underwriting analysis on uploaded bank statement files
+- name: analyze_applicant_from_statement_async
+  operationId: analyzeApplicantFromStatementAsync
+  method: POST
+  path: /v1/underwrite/analyze/statement/async
+  description: Submit a PDF bank statement for background underwriting analysis
+- name: analyze_applicant_from_statement_async_status
+  operationId: analyzeApplicantFromStatementAsyncStatus
+  method: GET
+  path: /v1/underwrite/analyze/statement/async/{id}
+  description: Poll status + result of a submitted async PDF analysis
+- name: analyze_applicant_from_parsed_statement
+  operationId: analyzeApplicantFromParsedStatement
+  method: POST
+  path: /v1/underwrite/analyze/statement/parsed
+  description: Run underwriting analysis on a browser-parsed PDF statement (JSON)
+- name: analyze_applicant_from_parsed_statement_async
+  operationId: analyzeApplicantFromParsedStatementAsync
+  method: POST
+  path: /v1/underwrite/analyze/statement/parsed/async
+  description: Submit a browser-parsed PDF statement for background analysis
+- name: submit_underwriting_feedback
+  operationId: submitUnderwritingFeedback
+  method: POST
+  path: /v1/underwrite/feedback
+  description: Submit corrections for a previous underwriting analysis
+- name: get_underwriting_analysis
+  operationId: getUnderwritingAnalysis
+  method: GET
+  path: /v1/underwrite/analyses/{id}
+  description: Re-fetch a previous underwriting analysis (7-day window)
+- name: get_underwriting_analysis_report
+  operationId: getUnderwritingAnalysisReport
+  method: GET
+  path: /v1/underwrite/analyses/{id}/report
+  description: Download a statement evidence report (PDF or CSV)
+- name: list_underwriting_analyses
+  operationId: listUnderwritingAnalyses
+  method: GET
+  path: /v1/underwrite/analyses
+  description: List past underwriting analyses (billing transparency)
+- name: ingest_statement
+  operationId: ingestStatement
+  method: POST
+  path: /v1/underwrite/ingest
+  description: Upload a bank statement (or ZIP of statements) and return parsed transactions
+- name: ingest_statement_batch
+  operationId: ingestStatementBatch
+  method: POST
+  path: /v1/underwrite/ingest/batch
+  description: Multi-file statement upload (multipart-with-N-files or ZIP)
+- name: get_ingestion
+  operationId: getIngestion
+  method: GET
+  path: /v1/underwrite/ingestions/{id}
+  description: Re-fetch a previous ingestion within the 7d window
+- name: list_ingestions
+  operationId: listIngestions
+  method: GET
+  path: /v1/underwrite/ingestions
+  description: List past ingestions (billing transparency)
+- name: create_collection_link
+  operationId: createCollectionLink
+  method: POST
+  path: /v1/underwrite/collection-links
+  description: Mint a borrower statement-collection link
+- name: list_collection_links
+  operationId: listCollectionLinks
+  method: GET
+  path: /v1/underwrite/collection-links
+  description: List your collection links
+- name: get_collection_link
+  operationId: getCollectionLink
+  method: GET
+  path: /v1/underwrite/collection-links/{id}
+  description: Read a collection link (status)
+- name: revoke_collection_link
+  operationId: revokeCollectionLink
+  method: DELETE
+  path: /v1/underwrite/collection-links/{id}
+  description: Revoke a collection link
+- name: stage_collection_file
+  operationId: stageCollectionFile
+  method: POST
+  path: /v1/underwrite/collection-links/{id}/files
+  description: Stage a statement file on a collection link
+- name: finish_collection_analyze
+  operationId: finishCollectionAnalyze
+  method: POST
+  path: /v1/underwrite/collection-links/{id}/finish-analyze
+  description: Run one consolidated analysis over the staged files and complete the link
+- name: get_billing_invoice_pdf
+  operationId: getBillingInvoicePdf
+  method: GET
+  path: /v1/billing/invoices/{id}/pdf
+  description: Download an invoice or credit-note PDF
+- name: get_billing_payment
+  operationId: getBillingPayment
+  method: GET
+  path: /v1/billing/payments/{paymentId}
+  description: Live Mollie state for one of the org’s payments
+- name: enrich_batch_async
+  operationId: enrichBatchAsync
+  method: POST
+  path: /v1/enrich/batch/async
+  description: Submit a large batch for background enrichment
+- name: enrich_batch_async_status
+  operationId: enrichBatchAsyncStatus
+  method: GET
+  path: /v1/enrich/batch/async/{id}
+  description: Get status + result of a submitted async batch
+- name: get_merchant
+  operationId: getMerchant
+  method: GET
+  path: /v1/merchants/{id}
+  description: Look up a merchant by catalog id
+- name: get_categories
+  operationId: getCategories
+  method: GET
+  path: /v1/categories
+  description: Return the canonical industry/subindustry vocabulary
+- name: submit_correction
+  operationId: submitCorrection
+  method: POST
+  path: /v1/feedback/correction
+  description: Submit a correction for a previously-enriched transaction
+- name: submit_confirmation
+  operationId: submitConfirmation
+  method: POST
+  path: /v1/feedback/confirmation
+  description: Confirm a previously-enriched transaction was correct
+- name: create_webhook_endpoint
+  operationId: createWebhookEndpoint
+  method: POST
+  path: /v1/webhook_endpoints
+  description: Register a webhook endpoint
+- name: list_webhook_endpoints
+  operationId: listWebhookEndpoints
+  method: GET
+  path: /v1/webhook_endpoints
+  description: List webhook endpoints for the caller org
+- name: get_webhook_endpoint
+  operationId: getWebhookEndpoint
+  method: GET
+  path: /v1/webhook_endpoints/{id}
+  description: Get a single webhook endpoint
+- name: update_webhook_endpoint
+  operationId: updateWebhookEndpoint
+  method: PATCH
+  path: /v1/webhook_endpoints/{id}
+  description: Update a webhook endpoint (url, events, status)
+- name: delete_webhook_endpoint
+  operationId: deleteWebhookEndpoint
+  method: DELETE
+  path: /v1/webhook_endpoints/{id}
+  description: Delete a webhook endpoint and its delivery history
+- name: rotate_webhook_endpoint_secret
+  operationId: rotateWebhookEndpointSecret
+  method: POST
+  path: /v1/webhook_endpoints/{id}/rotate_secret
+  description: Generate a new signing secret for an existing endpoint
+- name: list_webhook_deliveries
+  operationId: listWebhookDeliveries
+  method: GET
+  path: /v1/webhook_deliveries
+  description: List webhook delivery attempts for the caller org
+- name: list_aspsps
+  operationId: listAspsps
+  method: GET
+  path: /v1/connect/aspsps
+  description: List banks (ASPSPs) available for a country

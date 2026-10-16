@@ -1,0 +1,66 @@
+generated: '2026-10-16'
+method: derived
+source: the pre-flight dossier, apis.yml pointers, spec servers, well-known, vendors -- nothing fetched here
+generator: derive-hosts.py
+summary:
+  hosts: 4
+  own: 3
+  other_domain: 1
+  platform: 0
+  roles:
+  - api
+  - docs
+  - website
+hosts:
+- host: api.distyra.com
+  found_by:
+  - apis[]
+  types: []
+  serves:
+  - api
+  registrable_domain: distyra.com
+  role: api
+  relation: other-domain
+- host: api.distyra.eu
+  found_by:
+  - contract-discovery
+  types: []
+  serves: []
+  registrable_domain: distyra.eu
+  role: api
+  relation: own
+- host: distyra.eu
+  found_by:
+  - pointer
+  - probed
+  - contract-discovery
+  - well-known
+  types:
+  - Website
+  serves: []
+  registrable_domain: distyra.eu
+  role: website
+  relation: own
+- host: www.distyra.eu
+  found_by:
+  - pointer
+  - apis[]
+  - docs-index
+  - spec-found
+  types:
+  - Security
+  - ChangeLog
+  - Documentation
+  - APIReference
+  - GettingStarted
+  - Pricing
+  - StatusPage
+  - PrivacyPolicy
+  - TermsOfService
+  - Support
+  serves:
+  - docs
+  - spec
+  registrable_domain: distyra.eu
+  role: docs
+  relation: own

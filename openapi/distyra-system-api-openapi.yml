@@ -1,0 +1,226 @@
+openapi: 3.2.0
+info:
+  title: Distyra Transaction Enrichment System API
+  description: EU-native PSD2-specialist transaction enrichment.
+  version: 1.11.0
+servers:
+- url: https://api.distyra.com
+  description: Production (EU). Base URL stays api.distyra.com even though the website and portal use .eu.
+tags:
+- name: System
+  description: Health, version, status
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: Liveness + dependency health
+      tags:
+      - System
+      description: Pings Postgres and Redis. Returns 200 only if both subsystems respond. Unauthenticated; safe to call from load balancers and uptime checks.
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - checks
+                - version
+                - uptime_seconds
+                properties:
+                  status:
+                    anyOf:
+                    - type: string
+                      enum:
+                      - ok
+                    - type: string
+                      enum:
+                      - degraded
+                  checks:
+                    type: object
+                    required:
+                    - db
+                    - redis
+                    properties:
+                      db:
+                        anyOf:
+                        - type: string
+                          enum:
+                          - ok
+                        - type: string
+                          enum:
+                          - fail
+                      redis:
+                        anyOf:
+                        - type: string
+                          enum:
+                          - ok
+                        - type: string
+                          enum:
+                          - fail
+                  version:
+                    type: string
+                  uptime_seconds:
+                    type: number
+              example:
+                status: ok
+                checks:
+                  db: ok
+                  redis: ok
+                version: 0.1.0
+                uptime_seconds: 12345
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - checks
+                - version
+                - uptime_seconds
+                properties:
+                  status:
+                    anyOf:
+                    - type: string
+                      enum:
+                      - ok
+                    - type: string
+                      enum:
+                      - degraded
+                  checks:
+                    type: object
+                    required:
+                    - db
+                    - redis
+                    properties:
+                      db:
+                        anyOf:
+                        - type: string
+                          enum:
+                          - ok
+                        - type: string
+                          enum:
+                          - fail
+                      redis:
+                        anyOf:
+                        - type: string
+                          enum:
+                          - ok
+                        - type: string
+                          enum:
+                          - fail
+                  version:
+                    type: string
+                  uptime_seconds:
+                    type: number
+              example:
+                status: ok
+                checks:
+                  db: ok
+                  redis: ok
+                version: 0.1.0
+                uptime_seconds: 12345
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_<32 base58 chars>

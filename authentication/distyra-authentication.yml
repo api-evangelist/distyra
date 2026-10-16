@@ -1,0 +1,13 @@
+generated: '2026-10-16'
+method: derived
+source: openapi/distyra-openapi.json
+summary:
+  types:
+  - http
+schemes:
+- name: bearerAuth
+  type: http
+  scheme: bearer
+  bearerFormat: sk_<32 base58 chars>
+  sources:
+  - openapi/distyra-openapi.json

@@ -1,23 +1,259 @@
 aid: distyra
+
 name: Brightfield Software
-description: 'Brightfield Software is a company surfaced via the API Evangelist harvest backlog (source:
-  g2-catalog) and added to the network as a stub for full-pipeline profiling.'
+
+image: https://www.distyra.eu/assets/og/distyra-og.png
+
+description: Brightfield Software, operating under the Distyra brand, provides European bank data APIs that deliver raw transaction information
+  distilled into actionable signals. Their platform offers products for data enrichment, underwriting, and compliance, tailored to European payment
+  formats and regulations. Built in the EU, Distyra ensures data residency and privacy, supporting developers with comprehensive documentation,
+  pricing plans, and a status page. The service aims to simplify access to bank data for fintech applications, offering a free tier and enterprise
+  options.
+
 url: https://raw.githubusercontent.com/api-evangelist/distyra/refs/heads/main/apis.yml
+
 x-type: company
+
 x-source: harvest:g2-catalog
-x-tier: stub
-x-tier-reason: harvest
+
+x-tier: profiled
+x-tier-reason: enrichment pass 2026-10-16 (modular-v1; was harvest)
+
 specificationVersion: '0.20'
+
 created: '2026-10-16'
+
 modified: '2026-10-16'
+
 tags:
 - Company
-apis: []
+- Banking
+- API
+- Fintech
+- European
+
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
+
 common:
+- type: AgenticAccess
+  url: agentic-access/distyra-agentic-access.yml
+- type: Plans
+  url: plans/distyra-plans-pricing.yml
+- type: Spectral
+  url: rules/distyra-rules.yml
+- type: JSONLD
+  url: json-ld/distyra-context.jsonld
+- type: Vocabulary
+  url: vocabulary/distyra-vocabulary.yml
+- type: AgentSkill
+  url: skills/_index.yml
+- type: DataModel
+  url: data-model/distyra-data-model.yml
+- type: ChangeLog
+  url: changelog/distyra-changelog.yml
+- type: Deprecation
+  url: lifecycle/distyra-lifecycle.yml
+- type: Lifecycle
+  url: lifecycle/distyra-lifecycle.yml
+- type: ErrorCatalog
+  url: errors/distyra-problem-types.yml
+- type: Conformance
+  url: conformance/distyra-conformance.yml
+- type: SecurityTxt
+  url: well-known/distyra-security.txt
+- type: SecurityTxt
+  url: well-known/distyra-distyra-security.txt
+- type: WellKnown
+  url: well-known/distyra-well-known.yml
+- type: Hosts
+  url: hosts/distyra-hosts.yml
+- type: SDKs
+  url: packages/distyra-packages.yml
+- type: Packages
+  url: packages/distyra-packages.yml
+- type: Security
+  url: https://www.distyra.eu/security
+- type: ChangeLog
+  url: https://www.distyra.eu/changelog
+- type: Authentication
+  url: authentication/distyra-authentication.yml
+- type: VulnerabilityDisclosure
+  url: security/distyra-vulnerability-disclosure.yml
+- type: DomainSecurity
+  url: security/distyra-domain-security.yml
 - type: Website
   url: https://distyra.eu/
+- type: Documentation
+  url: https://www.distyra.eu/developers
+- type: APIReference
+  url: https://www.distyra.eu/reference
+- type: GettingStarted
+  url: https://www.distyra.eu/get-started
+- type: Pricing
+  url: https://www.distyra.eu/pricing
+- type: StatusPage
+  url: https://www.distyra.eu/status
+- type: PrivacyPolicy
+  url: https://www.distyra.eu/privacy-policy
+- type: TermsOfService
+  url: https://www.distyra.eu/tos
+- type: Support
+  url: https://www.distyra.eu/contact
+
+apis:
+- aid: distyra:distyra-authentication-api
+  name: Brightfield Software Authentication API
+  description: The authentication API from Brightfield Software — 1 operation(s) for authentication.
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - authentication
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-authentication-api-openapi.yml
+- aid: distyra:distyra-billing-api
+  name: Brightfield Software Billing API
+  description: The billing API from Brightfield Software — 2 operation(s) for billing.
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - billing
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-billing-api-openapi.yml
+- aid: distyra:distyra-catalog-api
+  name: Brightfield Software Catalog API
+  description: Read access to merchant catalog + taxonomy
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - catalog
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-catalog-api-openapi.yml
+- aid: distyra:distyra-connect-api
+  name: Brightfield Software Connect API
+  description: >-
+    Live PSD2/AIS bank connections (Distyra Connect). Fetch normalized transactions from a bank account
+    on demand. Nothing is stored.
+
+
+    `mode` says whose account it is: `own` (your organization’s), `end_user` (a customer of your product,
+    for anyone embedding Connect in something they sell), or `applicant` (an underwriting applicant).
+    Only `applicant` needs an Underwriting subscription. Billed per active connection per month.
+
+
+    ### Connecting a bank account, start to finish
+
+
+    **1. Ask for a link.** `POST /v1/connect/hosted-link` with the bank’s two-letter country code, e.g.
+    `{ "country": "NL" }`. For a customer’s account also send `mode: "end_user"`, your own `external_ref`
+    to identify them, and a `return_url`. Returns `{ url, token, expires_at }`.
+
+
+    **2. Send the account holder to that `url`.** They pick their bank and log in on the bank’s own site.
+    Neither you nor we see their credentials. The bank returns them to your `return_url`.
+
+
+    **3. Wait to be told it worked.** Listen for `connect.connection.activated`, or poll `GET /v1/connect/connections`
+    for one with `status` `active`. Do not treat the `return_url` redirect as success: they may have cancelled.
+
+
+    **4. See what you got.** `GET /v1/connect/connections/{id}/accounts`. One consent often covers several
+    accounts.
+
+
+    **5. Fetch transactions.** `GET /v1/connect/connections/{id}/transactions`. First call: no dates,
+    and you get all the history the bank will give, which can be years; make it soon after the connection
+    activates, because many banks give long history only then. Every later call without dates gives 90
+    days. After the first call pass `since=` the previous response’s `next_cursor`, and de-duplicate on
+    transaction `id` because the boundary day can overlap. `history=recent` limits any call, the first
+    included, to 90 days. `?enrich=true` adds merchant names, logos and categories. Every call fetches
+    from the bank, so poll on the schedule your product needs rather than in a loop.
+
+
+    **6. Let them disconnect.** `POST /v1/connect/connections/{id}/revoke-link` returns a short-lived,
+    keyless URL to put behind a Disconnect button. `DELETE /v1/connect/connections/{id}` does the same
+    from your backend.
+
+
+    **Consent expires** on a date set by the account holder’s bank, and banks differ. Each connection’s
+    `consent_expires_at` gives the exact date, and `max_consent_days` on `GET /v1/connect/aspsps` gives
+    a bank’s limit before anyone connects. If you need one number to plan around, use 90 days: no bank
+    we connect to allows less. An `applicant` connection closes after 7 days. For `own` and `end_user`
+    you get `connect.connection.reconsent_required` before it lapses, and every connection sends `connect.connection.expired`
+    after. Reconnect by repeating step 1 with the same `external_ref`, which is what keeps your records
+    pointing at the right customer.
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - connect
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-connect-api-openapi.yml
+- aid: distyra:distyra-enrichment-api
+  name: Brightfield Software Enrichment API
+  description: Single + batch enrichment
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - enrichment
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-enrichment-api-openapi.yml
+- aid: distyra:distyra-feedback-api
+  name: Brightfield Software Feedback API
+  description: Customer corrections + confirmations
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - feedback
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-feedback-api-openapi.yml
+- aid: distyra:distyra-system-api
+  name: Brightfield Software System API
+  description: Health, version, status
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - system
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-system-api-openapi.yml
+- aid: distyra:distyra-underwriting-api
+  name: Brightfield Software Underwriting API
+  description: >-
+    Applicant-level underwriting feature layer: turnover, recurring revenue, debt service, customer concentration,
+    tax payments, statutory contributions. Lender-side persistence only (7-day re-fetch window); transaction
+    content is never retained beyond purge. See `POST /v1/underwrite/analyze` for the main entry point.
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - underwriting
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-underwriting-api-openapi.yml
+- aid: distyra:distyra-webhooks-api
+  name: Brightfield Software Webhooks API
+  description: >-
+    Webhook endpoint management (register, list, rotate signing secret). What arrives at your URL is the
+    `WebhookDelivery` schema: the envelope, the fields on each event, the retry schedule, and how to verify
+    the signature.
+  humanURL: https://www.distyra.eu/reference
+  baseURL: https://api.distyra.com
+  tags:
+  - webhooks
+  properties:
+  - type: OpenAPI
+    url: openapi/distyra-webhooks-api-openapi.yml
+x-enrichment:
+  date: '2026-10-16'
+  status: enriched
+  artifacts_added: 26
+  pass: modular-v1
+  engine: identity=local,contract=local,surfaces=local,docs=local,regulatory=local

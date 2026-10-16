@@ -1,0 +1,29 @@
+{
+  "provider": "distyra",
+  "sources": [
+    "distyra-openapi.json"
+  ],
+  "outputs": [
+    "distyra-authentication-api-openapi.yml",
+    "distyra-billing-api-openapi.yml",
+    "distyra-catalog-api-openapi.yml",
+    "distyra-connect-api-openapi.yml",
+    "distyra-enrichment-api-openapi.yml",
+    "distyra-feedback-api-openapi.yml",
+    "distyra-system-api-openapi.yml",
+    "distyra-underwriting-api-openapi.yml",
+    "distyra-webhooks-api-openapi.yml"
+  ],
+  "archived": [
+    "archived openapi/distyra-openapi.json"
+  ],
+  "errors": [],
+  "warnings": [],
+  "notes": [
+    "distyra-openapi.json: upgraded openapi 3.0.3 -> OpenAPI 3.2.0",
+    "distyra-openapi.json: declared missing tag: authentication",
+    "distyra-openapi.json: declared missing tag: billing",
+    "apis.yml register: written (+9 apis, 9 total)"
+  ],
+  "skipped": []
+}

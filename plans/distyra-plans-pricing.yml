@@ -1,0 +1,65 @@
+generated: '2026-10-16'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.distyra.eu/pricing
+sources:
+- https://www.distyra.eu/pricing
+name: Brightfield Software pricing
+audience: developer-api
+pricing_basis: per-call
+plans:
+- name: Free
+  price_text: € 0 /mo
+  price: 0
+  description: For evaluation and one connection.
+  features:
+  - 1 free connection
+  - Live PSD2 access
+  - Normalized feed (API + webhook)
+  - EU‑hosted, no raw feed stored
+  limits:
+  - name: Connections
+    limit_text: 1, once
+- name: Business
+  price_text: € 5 /mo
+  price: 5
+  description: 'The self‑serve plan: connect accounts and pipe the feed into your product.'
+  features:
+  - Per connection billing
+  - Live PSD2 access
+  - Normalized feed (API + webhook)
+  - EU‑hosted, no raw feed stored
+  limits:
+  - name: Connections
+    limit_text: Volume‑tiered, no cap
+- name: Wholesale
+  price_text: Custom
+  description: For running Connect at scale, on volume pricing.
+- name: Pay as you go
+  price_text: € 0 /mo
+  price: 0
+  description: For prototypes, side projects, and production apps that pay only for what they use.
+  features:
+  - Free to 10,000 transactions/mo
+  - Enrichment, priced per transaction
+  limits:
+  - name: Transactions included
+    limit_text: 10,000 / mo
+- name: Growth
+  price_text: € 99 /mo
+  price: 99
+  description: For SMB fintechs and PFM apps in production.
+  features:
+  - 100,000 transactions/mo included
+  - Per transaction after €0.0015
+  - Higher rate limits
+  limits:
+  - name: Transactions included
+    limit_text: 100,000 / mo
+- name: Enterprise
+  price_text: Custom
+  description: For banks and regulated institutions.
+- name: Underwriting
+  price_text: Custom pricing, sized to your volume.
+  description: Per applicant analysed, not per API call.
+docs: https://www.distyra.eu/pricing

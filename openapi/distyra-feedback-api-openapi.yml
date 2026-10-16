@@ -1,0 +1,782 @@
+openapi: 3.2.0
+info:
+  title: Distyra Transaction Enrichment Feedback API
+  description: EU-native PSD2-specialist transaction enrichment.
+  version: 1.11.0
+servers:
+- url: https://api.distyra.com
+  description: Production (EU). Base URL stays api.distyra.com even though the website and portal use .eu.
+tags:
+- name: Feedback
+  description: Customer corrections + confirmations
+paths:
+  /v1/feedback/correction:
+    post:
+      operationId: submitCorrection
+      summary: Submit a correction for a previously-enriched transaction
+      tags:
+      - Feedback
+      description: 'Records the customer''s correction against the (descriptor, merchant) tuple. Goes into your feedback queue; corrections are reviewed before being promoted into the shared catalog. Re-submitting the same correction is idempotent at the count-of-signals level; duplicates are not deduplicated, by design (each occurrence is a fresh confidence signal).
+
+
+        **Required scope:** `feedback:write`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              description: At least one of `corrected_merchant_id` or `corrected_merchant_name` must be provided.
+              type: object
+              required:
+              - descriptor
+              properties:
+                descriptor:
+                  minLength: 1
+                  maxLength: 1024
+                  description: The original transaction descriptor as passed to /v1/enrich.
+                  type: string
+                corrected_merchant_id:
+                  minimum: 1
+                  description: Catalog id of the merchant that should have been returned. Use this when the right merchant exists in the catalog (lookup via /v1/merchants/{id} or by trial enrichment).
+                  type: integer
+                corrected_merchant_name:
+                  maxLength: 256
+                  description: Free-text name of the right merchant when no catalog id is known. It goes to our review queue, and the merchant may then be added to our catalogue.
+                  type: string
+                note:
+                  maxLength: 1024
+                  description: Optional free-text context (e.g. "this is a French chain not the German one").
+                  type: string
+        description: At least one of `corrected_merchant_id` or `corrected_merchant_name` must be provided.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - descriptor_hash
+                properties:
+                  id:
+                    format: uuid
+                    description: Server-generated id of the persisted feedback row.
+                    type: string
+                  descriptor_hash:
+                    description: The hash of the descriptor this feedback is keyed on. The same descriptor sent to /v1/enrich produces the same hash.
+                    type: string
+        '400':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '422':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+  /v1/feedback/confirmation:
+    post:
+      operationId: submitConfirmation
+      summary: Confirm a previously-enriched transaction was correct
+      tags:
+      - Feedback
+      description: 'Positive feedback signal that strengthens confidence in the (descriptor, merchant) tuple. Aggregated into the confidence weighting for that merchant. Re-submitting is allowed and additive (each call counts as one signal).
+
+
+        **Required scope:** `feedback:write`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - descriptor
+              properties:
+                descriptor:
+                  minLength: 1
+                  maxLength: 1024
+                  description: The original transaction descriptor as passed to /v1/enrich.
+                  type: string
+                confirmed_merchant_id:
+                  minimum: 1
+                  description: Catalog id of the merchant whose enrichment is being confirmed. Omit to confirm a "no merchant resolved" decision (e.g. /v1/enrich correctly identified this as a bank fee).
+                  type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - descriptor_hash
+                properties:
+                  id:
+                    format: uuid
+                    description: Server-generated id of the persisted feedback row.
+                    type: string
+                  descriptor_hash:
+                    description: The hash of the descriptor this feedback is keyed on. The same descriptor sent to /v1/enrich produces the same hash.
+                    type: string
+        '400':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '422':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_<32 base58 chars>

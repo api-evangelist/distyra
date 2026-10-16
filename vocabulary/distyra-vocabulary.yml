@@ -1,0 +1,57 @@
+generated: '2026-10-16'
+method: derived
+generator: derive-vocabulary.py
+source: openapi/distyra-openapi.json
+vocabulary:
+  name: Brightfield Software Domain Vocabulary
+  description: 'Terms declared by Brightfield Software''s own API contract: its resource groups, objects and enumerations, with the contract''s
+    definitions. Derived, not authored.'
+  version: '2026-10-16'
+  terms:
+  - term: system
+    definition: Health, version, status
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: enrichment
+    definition: Single + batch enrichment
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: feedback
+    definition: Customer corrections + confirmations
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: catalog
+    definition: Read access to merchant catalog + taxonomy
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: underwriting
+    definition: 'Applicant-level underwriting feature layer: turnover, recurring revenue, debt service, customer concentration, tax payments,
+      statutory contributions. Lender-side persistence only (7-day re-fetch window); transaction content is never retained beyond purge. See `POST
+      /v1/underwrite/analyze` for the main entry point.'
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: webhooks
+    definition: 'Webhook endpoint management (register, list, rotate signing secret). What arrives at your URL is the `WebhookDelivery` schema:
+      the envelope, the fields on each event, the retry schedule, and how to verify the signature.'
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: connect
+    definition: 'Live PSD2/AIS bank connections (Distyra Connect). Fetch normalized transactions from a bank account on demand. Nothing is stored.
+      `mode` says whose account it is: `own` (your organization’s), `end_user` (a customer of your product, for anyone embedding Connect in something
+      they sell), or `applicant` (an underwriting applicant). Only `applicant` needs an Underwriting subscription. Billed per active'
+    tags:
+    - Resource Group
+    source: openapi/distyra-openapi.json
+  - term: WebhookDelivery
+    definition: The body POSTed to a registered webhook endpoint. **Discriminator.** Enrichment batch events name themselves in an `event` field;
+      every other event uses `type`. That split is historical and is part of the wire contract, so read whichever your subscription implies rather
+      than assuming one. **Test and live.** An endpoint has the mode of the key that created it, and receives only events about activit
+    tags:
+    - Object
+    source: openapi/distyra-openapi.json#/components/schemas/WebhookDelivery

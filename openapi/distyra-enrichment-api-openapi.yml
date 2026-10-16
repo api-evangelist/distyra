@@ -1,0 +1,3012 @@
+openapi: 3.2.0
+info:
+  title: Distyra Transaction Enrichment API
+  description: EU-native PSD2-specialist transaction enrichment.
+  version: 1.11.0
+servers:
+- url: https://api.distyra.com
+  description: Production (EU). Base URL stays api.distyra.com even though the website and portal use .eu.
+tags:
+- name: Enrichment
+  description: Single + batch enrichment
+paths:
+  /v1/enrich:
+    post:
+      operationId: enrichSingle
+      summary: Enrich a single transaction
+      tags:
+      - Enrichment
+      description: 'Single-transaction enrichment. Returns the full response shape with an `availability` block. In that block `merchant_identity`, `transaction_type` and `logos` are constants meaning the feature has shipped, while `location` and `subscription_detection` report whether this request had the data the field needs. `metadata.is_subscription` is a merchant-category hint, not per-transaction recurrence, and is null when no merchant resolved. Confidence values are uncalibrated similarity scores.
+
+
+        **Our AI provider.** To identify a merchant, or to check that a merchant we identified matches the transaction, we may send the transaction to our AI provider, an EU sub-processor under a zero-retention, no-training agreement, together with its amount, currency, MCC and country. `cache_only=true` prevents this.
+
+
+        **Required scope:** `enrichment:read`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - descriptor
+              properties:
+                descriptor:
+                  minLength: 1
+                  maxLength: 1024
+                  description: Raw bank descriptor as it appeared on the statement. Required.
+                  type: string
+                  example: ALBERT HEIJN 1234 AMSTERDAM NL
+                amount:
+                  description: Transaction amount. Negative = debit, positive = credit. Optional; it can help with transactions we cannot resolve from the description alone.
+                  type: number
+                  example: -12.34
+                currency:
+                  minLength: 3
+                  maxLength: 3
+                  description: ISO-4217 three-letter currency code.
+                  type: string
+                  example: EUR
+                mcc:
+                  minLength: 4
+                  maxLength: 4
+                  description: Merchant Category Code (4-digit ISO 18245). Optional; like amount, it can help with transactions we cannot resolve from the description alone.
+                  type: string
+                  example: '5411'
+                country_hint:
+                  minLength: 2
+                  maxLength: 2
+                  description: ISO-3166 alpha-2 country code. Helps tell apart merchants that share a name in different countries.
+                  type: string
+                  example: NL
+                merchant_name:
+                  maxLength: 256
+                  description: Pre-cleaned merchant name, if you already have one from your own processing.
+                  type: string
+                bank_code_description:
+                  maxLength: 256
+                  description: Provider-supplied transaction-code label (e.g. SEPA RCT, ATM withdrawal).
+                  type: string
+            example:
+              descriptor: ALBERT HEIJN 1234 AMSTERDAM NL
+              amount: -23.45
+              currency: EUR
+              country_hint: NL
+      parameters:
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: force_refresh
+        required: false
+        description: 'When `true`, do not reuse an earlier answer for this descriptor: work it out again, and keep the new answer for later requests. If it resolves to a merchant, that merchant''s logo and details are refreshed in the background. Mutually exclusive with `cache_only=true`.'
+      - schema:
+          enum:
+          - high
+          - medium
+          - low
+          type: string
+        example: medium
+        in: query
+        name: min_confidence
+        required: false
+        description: 'Filter ready responses by `confidence_bucket`. When set and the result''s `confidence_bucket` is below the threshold (e.g. result=`low` with `min_confidence=high`), the response still includes the merchant block but with `meets_min_confidence: false`. Callers can either skip the result or relax the threshold and retry.'
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: cache_only
+        required: false
+        description: When `true`, we answer only from what we already know, and the call never sends data to our AI provider. Mutually exclusive with `force_refresh=true`.
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: wait_for_crawl
+        required: false
+        description: 'When `true` and the merchant is new to us, wait up to `wait_timeout_ms` for its logo to be found, then return it instead of `logo_url: null`. No effect for merchants we already know. On timeout, returns the normal response, which carries a lower-quality favicon when one is available.'
+      - schema:
+          type: string
+        example: '8000'
+        in: query
+        name: wait_timeout_ms
+        required: false
+        description: Upper bound in milliseconds for `wait_for_crawl` (default 8000, max 15000). Ignored unless `wait_for_crawl=true`.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - merchant
+                - category
+                - location
+                - metadata
+                - confidence
+                - resolution
+                - alternatives
+                - trace_id
+                - cache_hit
+                - cache_tier
+                - processing_time_ms
+                - availability
+                - livemode
+                properties:
+                  merchant:
+                    type: object
+                    required:
+                    - name
+                    - parent
+                    - parent_catalog_id
+                    - domain
+                    - logo_url
+                    - logo_quality_score
+                    - logo_icon_url
+                    - logo_artwork_aspect
+                    - logo_artwork_luminance
+                    - brand_colors
+                    - catalog_id
+                    - source
+                    - confidence_bucket
+                    - crawl_started_at
+                    - crawl_attempts
+                    - created_at
+                    properties:
+                      name:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      parent:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      parent_catalog_id:
+                        anyOf:
+                        - type: integer
+                        - type: 'null'
+                      domain:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      logo_url:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      logo_quality_score:
+                        anyOf:
+                        - type: number
+                        - type: 'null'
+                      logo_icon_url:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      logo_artwork_aspect:
+                        anyOf:
+                        - type: number
+                        - type: 'null'
+                      logo_artwork_luminance:
+                        anyOf:
+                        - type: integer
+                        - type: 'null'
+                      brand_colors:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                          - hex
+                          - source
+                          properties:
+                            hex:
+                              description: 'Lowercase 6-digit hex, leading #.'
+                              type: string
+                            source:
+                              description: theme_color_meta | msapplication_tile_meta | pixel_sample
+                              type: string
+                      catalog_id:
+                        anyOf:
+                        - type: integer
+                        - type: 'null'
+                      source:
+                        description: 'How `merchant.name` was arrived at. **`descriptor` is the one value to branch on**: it means nothing was identified and `name` is your own descriptor handed back, tidied where we could, so the transaction still has something to render. It always comes with `availability.merchant_identity: false`, a null `catalog_id` and a null `confidence_bucket`; treat it as unenriched and do not store it as a merchant identity. **The other four all mean a merchant was identified**, and differ only in how: `catalog` a merchant from our curated catalogue, `crawl` a merchant identified from public sources, `fuzzy_match` a catalogue merchant whose name is close to but not exactly the one we saw, `llm_inferred` a name proposed by an AI model. Read `confidence_bucket` rather than ranking those four: they say how the answer was reached, not how good it is. `null` means no merchant block was served to describe. Treat the set as open and keep a default branch.'
+                        anyOf:
+                        - type: string
+                          enum:
+                          - catalog
+                        - type: string
+                          enum:
+                          - crawl
+                        - type: string
+                          enum:
+                          - fuzzy_match
+                        - type: string
+                          enum:
+                          - llm_inferred
+                        - type: string
+                          enum:
+                          - descriptor
+                        - type: 'null'
+                      confidence_bucket:
+                        anyOf:
+                        - type: string
+                          enum:
+                          - high
+                        - type: string
+                          enum:
+                          - medium
+                        - type: string
+                          enum:
+                          - low
+                        - type: 'null'
+                      crawl_started_at:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      crawl_attempts:
+                        minimum: 0
+                        type: integer
+                      created_at:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      meets_min_confidence:
+                        type: boolean
+                  category:
+                    description: 'Category labels for the resolved merchant. When the merchant is in our catalogue, `primary` is always its catalogue industry (even if null), so the label is stable however the merchant was identified. Labels proposed by an AI model appear only for a merchant not in our catalogue, marked `source: "llm"`.'
+                    type: object
+                    required:
+                    - primary
+                    - secondary
+                    - source
+                    properties:
+                      primary:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      secondary:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      source:
+                        description: 'Where the category labels came from. ''catalog'': the curated catalog row''s industry/subindustry (deterministic: the same merchant always returns the same category). ''llm'': labels proposed by an AI model for a merchant not yet in our catalogue, drawn from the same vocabulary but not yet reviewed by us. null: no category available.'
+                        anyOf:
+                        - type: string
+                          enum:
+                          - catalog
+                        - type: string
+                          enum:
+                          - llm
+                        - type: 'null'
+                  location:
+                    type: object
+                    required:
+                    - city
+                    - postcode
+                    - country
+                    properties:
+                      city:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      postcode:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      country:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                  metadata:
+                    type: object
+                    required:
+                    - is_subscription
+                    - is_marketplace
+                    - facilitator
+                    - transaction_type
+                    - country_matching
+                    - type_unavailable
+                    - is_transfer
+                    - is_bank_internal
+                    - is_p2p
+                    - counterparty_role
+                    - statutory_kind
+                    properties:
+                      is_subscription:
+                        description: 'Merchant-category hint: true when the resolved merchant predominantly bills on subscription (streaming, SaaS, telco, gym, insurance). This reflects the merchant, not this transaction: a single charge at a subscription merchant may still be a one-off. True only for conservatively curated brands. Null means no merchant resolved, so there was no catalog row to consult; false means a row resolved and is not on the curated list. Before 2026-07-16 the unresolved case also reported false, which asserted a negative we had no basis for. Per-account recurrence detection needs the transaction series and lives in the banking/iOS layer, not this stateless API.'
+                        anyOf:
+                        - type: boolean
+                        - type: 'null'
+                      is_marketplace:
+                        type: boolean
+                      facilitator:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      transaction_type:
+                        description: 'bank_fee | internal_transfer | p2p_transfer | cash_withdrawal | cash_deposit | investment_transfer | salary | refund | direct_debit | standing_order | returned_dd | merchant_payment. "merchant_payment" is the ordinary-purchase verdict: no other transaction type applied, and a merchant or category was identified, so this is a normal payment to a business. Null means genuinely undetermined (nothing resolved). Before 2026-07-16 ordinary purchases reported null at confidence 0, indistinguishable from "no idea", while the docs advertised a "merchant_payment" value that was not in the enum and could never be returned.'
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      country_matching:
+                        description: 'Whether country-constrained matching was available for this request. It describes the request rather than the answer, and that distinction is the point: `constrained` reflects the `country_hint` you sent, not a country inferred from the descriptor text. A descriptor ending in a country code may still constrain matching while this reads false, because the advice being given is about what your integration can change. Why it exists: without a country, a same-named merchant in another country can win, and nothing used to say so. A German consumer statement sent with no hint resolved to .fi, .at, .ie, .pl and .nl domains. It is returned on both paths, so a client can read it unconditionally.'
+                        type: object
+                        required:
+                        - constrained
+                        - advisory
+                        properties:
+                          constrained:
+                            description: True when this request supplied `country_hint`, so matching could prefer a merchant in that country over a same-named one elsewhere. False when it did not.
+                            type: boolean
+                          advisory:
+                            description: A sentence when `constrained` is false, null when it is true. Read the boolean rather than testing whether this object is present, because the object is returned on every response.
+                            anyOf:
+                            - type: string
+                            - type: 'null'
+                      type_unavailable:
+                        description: "Why `transaction_type` is null, or null when a type was determined. A bare null type is indistinguishable from \"we tried and failed\", and the two need different responses from you. \n\nEach reason describes this transaction, not your bank in general. One row without a transaction code does not establish that a bank never sends them, so aggregate across many transactions before concluding anything about an institution."
+                        anyOf:
+                        - type: object
+                          required:
+                          - reason
+                          - retryable
+                          properties:
+                            reason:
+                              enum:
+                              - transient_failure
+                              - bank_sent_no_type_data
+                              - no_type_data_supplied
+                              - bank_code_unrecognised
+                              - no_rule_matched
+                              description: 'transient_failure: enrichment failed transiently; see `resolution` and retry. bank_sent_no_type_data: we read this transaction from the bank and it carried no transaction code of any kind, neither a text description nor a structured ISO 20022 or proprietary code, and no MCC, so there was nothing to determine a type from. no_type_data_supplied: you sent neither bank_code_description nor mcc and we did not read the record ourselves, so we cannot tell whether your bank provides them. Where your bank provides a bank_code_description, sending it is the most reliable way to get a type. bank_code_unrecognised: a transaction code reached us, from you or from the bank record itself, and we do not decode it yet. That is our gap, not your bank''s; tell us the code and we will add it. no_rule_matched: the transaction carried type information we understood, but it did not establish a type, and no merchant or category was identified.'
+                              type: string
+                            retryable:
+                              description: True only for transient_failure. Every other reason is a settled answer for this transaction.
+                              type: boolean
+                        - type: 'null'
+                      is_transfer:
+                        type: boolean
+                      is_bank_internal:
+                        type: boolean
+                      is_p2p:
+                        type: boolean
+                      counterparty_role:
+                        description: '**What this counterparty is to the account holder**, when the resolved catalog row is tagged. Null when it is not, which is the common case: tagging is curated per row and ordinary merchants are deliberately untagged.
+
+
+                          **Null does not mean "not one of these".** It means we hold no curated claim either way, and the two should not be presented the same way to anyone making a decision.
+
+
+                          Carried over from the business profile: `tax_authority` a tax or revenue body, refined by `statutory_kind` when it is really a social-charge body; `lender` a credit provider, excluding mortgages which are separate below; `internal_transfer` another account of the holder''s own.
+
+
+                          Business-side: `customer` pays the holder for goods or services; `supplier` is paid by them for the same; `payment_processor` settles card or platform takings, so money arriving from one is usually revenue that has already been earned; `employee` is paid wages by the holder.
+
+
+                          Consumer-side, added 2026-08-12: `employer` pays the holder wages, the inverse of `employee`, and the direction is the whole meaning; `benefits_agency` pays state benefits, kept separate from `employer` because some lenders may not count benefits toward affordability; `pension_provider`; `landlord`; `mortgage_provider`, separate from `lender` because housing cost is treated differently from unsecured credit in every market we surveyed; `utility`; `insurer`; `childcare`; `alimony_recipient`; `education`.
+
+
+                          **No value here names a health condition, a religion, a political opinion or any other GDPR Article 9 special category**, and none will be added that does. That is a deliberate property rather than a coincidence: it is what lets a transaction suppressed as special-category keep its role, and `benefits_agency` names a payer rather than a reason for payment for the same reason.
+
+
+                          **Five of the seventeen have catalog rows today** (measured 2026-10-06: `tax_authority` 159, `lender` 74, `payment_processor` 21, `benefits_agency` 8, `mortgage_provider` 4). The other twelve are published and currently return for nothing. They are listed because the vocabulary is the contract and a value appearing later must not be a surprise, not because coverage is implied.
+
+
+                          **Treat it as an open enum**: switch on what you know and keep a default branch. A new role ships in `/v1` without a version bump; a role is never **removed** from it in place.'
+                        anyOf:
+                        - type: string
+                          enum:
+                          - tax_authority
+                        - type: string
+                          enum:
+                          - lender
+                        - type: string
+                          enum:
+                          - internal_transfer
+                        - type: string
+                          enum:
+                          - customer
+                        - type: string
+                          enum:
+                          - supplier
+                        - type: string
+                          enum:
+                          - payment_processor
+                        - type: string
+                          enum:
+                          - employee
+                        - type: string
+                          enum:
+                          - employer
+                        - type: string
+                          enum:
+                          - benefits_agency
+                        - type: string
+                          enum:
+                          - pension_provider
+                        - type: string
+                          enum:
+                          - landlord
+                        - type: string
+                          enum:
+                          - mortgage_provider
+                        - type: string
+                          enum:
+                          - utility
+                        - type: string
+                          enum:
+                          - insurer
+                        - type: string
+                          enum:
+                          - childcare
+                        - type: string
+                          enum:
+                          - alimony_recipient
+                        - type: string
+                          enum:
+                          - education
+                        - type: 'null'
+                        example: tax_authority
+                      statutory_kind:
+                        description: 'Refines a `counterparty_role` of `tax_authority` into **which statutory charge** it collects, so a social contribution is not reported as general taxation. Null on every other role, and null on a tax authority we hold no refinement for.
+
+
+                          `social_security` a general social-insurance body; `health` a health-insurance contribution; `pension` a state or mandatory occupational scheme; `accident` statutory accident or injury insurance; `sectoral` an industry-specific mandatory fund; `social_secretariat` an intermediary that collects on a body''s behalf, which is a payee rather than the charge itself; `other` a statutory charge that is none of the above.
+
+
+                          **It names the charge, not a condition.** `health` is a health-insurance contribution that nearly everyone in the relevant country pays; it says nothing about the account holder''s health and is not a GDPR Article 9 special category. Curated per row, not inferred from the industry taxonomy, which collapsed the statutory subindustries into broad ones shared with commercial entities in June 2026.
+
+
+                          **Treat it as an open enum**, as with `counterparty_role`.'
+                        anyOf:
+                        - type: string
+                          enum:
+                          - health
+                        - type: string
+                          enum:
+                          - pension
+                        - type: string
+                          enum:
+                          - accident
+                        - type: string
+                          enum:
+                          - sectoral
+                        - type: string
+                          enum:
+                          - social_secretariat
+                        - type: string
+                          enum:
+                          - social_security
+                        - type: string
+                          enum:
+                          - other
+                        - type: 'null'
+                        example: social_security
+                  confidence:
+                    type: object
+                    required:
+                    - merchant
+                    - category
+                    - transaction_type
+                    - overall
+                    properties:
+                      merchant:
+                        anyOf:
+                        - type: number
+                        - type: 'null'
+                      category:
+                        anyOf:
+                        - type: number
+                        - type: 'null'
+                      transaction_type:
+                        type: number
+                      overall:
+                        type: number
+                  resolution:
+                    description: Structured reason for the resolution outcome, so callers can act on null results.
+                    type: object
+                    required:
+                    - status
+                    - proposed_name
+                    - confidence
+                    - retryable
+                    - retry_after
+                    - message
+                    properties:
+                      status:
+                        enum:
+                        - resolved
+                        - unresolved_unknown
+                        - low_signal_descriptor
+                        - below_mint_threshold
+                        - timed_out
+                        - transient_error
+                        - rate_limited
+                        description: 'resolved: a merchant or non-merchant transaction_type was resolved. unresolved_unknown: we could not identify the merchant. low_signal_descriptor: the descriptor was too thin to resolve, so send the fuller statement form. below_mint_threshold: we found a possible merchant name, but not with enough confidence to report it as identified (see proposed_name/confidence). timed_out / transient_error: a transient failure during identification. Retryable, not a verdict. rate_limited: merchant identification is paused by a safeguard, so this response carries a cleaned descriptor without a newly identified merchant. The request itself still succeeds with 200. Retryable: retry_after gives the seconds until it clears, and message a sentence you can show a user. Ordinary use does not reach it, and sustained request rates are governed separately and answer 429.'
+                        type: string
+                      proposed_name:
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                      confidence:
+                        anyOf:
+                        - type: number
+                        - type: 'null'
+                      retryable:
+                        description: true for timed_out / transient_error / rate_limited. Retry the same request; the null is transient, not a definitive "unknown". When retry_after is set, wait that long first.
+                        type: boolean
+                      retry_after:
+                        description: 'Seconds after which retrying the same descriptor is worthwhile, or null when it is not. Set when an unknown merchant triggered background discovery: the system is fetching + confirming the brand, so the descriptor typically resolves after this delay (eventual consistency). Also set on rate_limited, where it is the seconds until the protective limit clears and retrying before it will hit the same thing. Retry once after this many seconds, or just let your next natural re-sync pick it up. null = a definitive non-result, no retry will help.'
+                        anyOf:
+                        - minimum: 0
+                          type: integer
+                        - type: 'null'
+                      message:
+                        description: 'A short human-readable sentence you can surface to a user, or null. Populated only where `status` alone cannot convey what to do about it: today that is rate_limited, where it says what is degraded and how long for. `status` remains the machine-readable contract; do not branch on this string.'
+                        anyOf:
+                        - type: string
+                        - type: 'null'
+                  alternatives:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - name
+                      - confidence
+                      properties:
+                        name:
+                          type: string
+                        confidence:
+                          type: number
+                  trace_id:
+                    type: string
+                  cache_hit:
+                    type: boolean
+                  cache_tier:
+                    minimum: 0
+                    maximum: 4
+                    description: 'An opaque indicator of how this answer was produced. **It is not a quality, accuracy, or confidence signal and its values carry no ordering**: a higher number is not a better answer. **Do not branch on it.** To tell whether a merchant was identified, read availability.merchant_identity or merchant.source; for confidence, read confidence.merchant or merchant.confidence_bucket.'
+                    type: integer
+                  processing_time_ms:
+                    minimum: 0
+                    type: integer
+                  availability:
+                    description: 'Per-request summary of what this one response actually yielded. Changed in 0.8.0: merchant_identity/transaction_type/logos used to be build-time constants meaning "the feature has shipped", hardcoded true on every response, which contradicted the payload (merchant_identity:true beside merchant.name:null). They now report what you actually got. Changed in 0.9.0: merchant_identity is no longer equivalent to `merchant.name !== null`. When nothing resolves, merchant.name now carries your own descriptor back (merchant.source = "descriptor") so the transaction still has something to display, and merchant_identity stays false. Branch on merchant_identity or merchant.source, not on the presence of a name.'
+                    type: object
+                    required:
+                    - merchant_identity
+                    - transaction_type
+                    - logos
+                    - location
+                    - subscription_detection
+                    properties:
+                      merchant_identity:
+                        description: '**True when a merchant was identified**, whether one already in our catalogue or one newly proposed. **Not the same as merchant.name being populated.** When nothing resolves, merchant.name carries your own descriptor back (merchant.source = "descriptor") and this stays false.'
+                        type: boolean
+                      transaction_type:
+                        description: 'True when metadata.transaction_type is populated. Distinct from merchant_identity: a bank fee can be typed with no merchant identified.'
+                        type: boolean
+                      logos:
+                        description: True when merchant.logo_url is populated on this response.
+                        type: boolean
+                      location:
+                        description: True when this descriptor yielded a city or country.
+                        type: boolean
+                      subscription_detection:
+                        description: True when a catalog row resolved, so its subscription flag was available to consult. Equivalently, metadata.is_subscription is not null.
+                        type: boolean
+                  livemode:
+                    description: true when served to a live key; false when served to a test-mode (sk_test_) key. Test-mode responses are enriched the same way but carry no billing or quota impact.
+                    type: boolean
+              example:
+                merchant:
+                  name: Albert Heijn
+                  parent: Ahold Delhaize
+                  parent_catalog_id: 9001
+                  domain: ah.nl
+                  logo_url: https://cdn.distyra.com/saas/142/a3f2b9e7d4c1f8a0/v1/light.png?token=…&expires=…
+                  logo_quality_score: 0.8
+                  logo_icon_url: https://cdn.distyra.com/saas/142/a3f2b9e7d4c1f8a0/v1/icon.png?token=…&expires=…
+                  logo_artwork_aspect: 3.42
+                  logo_artwork_luminance: 118
+                  brand_colors:
+                  - hex: '#0faeef'
+                    source: theme_color_meta
+                  catalog_id: 142
+                  source: catalog
+                  confidence_bucket: high
+                  crawl_started_at: '2026-04-10T08:13:42.000Z'
+                  crawl_attempts: 1
+                  created_at: '2025-12-01T00:00:00.000Z'
+                category:
+                  primary: Retail & E-commerce
+                  secondary: supermarket
+                  source: catalog
+                location:
+                  city: null
+                  postcode: null
+                  country: null
+                metadata:
+                  is_subscription: false
+                  is_marketplace: false
+                  facilitator: null
+                  transaction_type: merchant_payment
+                  is_transfer: false
+                  is_bank_internal: false
+                  is_p2p: false
+                confidence:
+                  merchant: 0.97
+                  category: 0.95
+                  transaction_type: 1
+                  overall: 0.96
+                resolution:
+                  status: resolved
+                  proposed_name: null
+                  confidence: null
+                  retryable: false
+                  retry_after: null
+                  message: null
+                alternatives: []
+                trace_id: req-01HXYZ...
+                cache_hit: true
+                cache_tier: 1
+                processing_time_ms: 2
+                availability:
+                  merchant_identity: true
+                  transaction_type: true
+                  logos: true
+                  location: false
+                  subscription_detection: true
+                livemode: true
+        '400':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '402':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '422':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+  /v1/enrich/batch:
+    post:
+      operationId: enrichBatch
+      summary: Enrich a batch of transactions
+      tags:
+      - Enrichment
+      description: 'Batch enrichment of up to 100 items per call. Items run with concurrency 10. Per-item failures surface as `{ error, detail }` in the corresponding result slot; one bad row never fails the batch. Larger jobs (>100) use the async batch endpoint. Query-string flags (`force_refresh`, `min_confidence`, `cache_only`) apply to every item in the batch.
+
+
+        **Our AI provider.** To identify a merchant, or to check that a merchant we identified matches the transaction, we may send the transaction to our AI provider, an EU sub-processor under a zero-retention, no-training agreement, together with its amount, currency, MCC and country. `cache_only=true` prevents this.
+
+
+        **Required scope:** `enrichment:read`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - items
+              properties:
+                items:
+                  minItems: 1
+                  maxItems: 100
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - descriptor
+                    properties:
+                      descriptor:
+                        minLength: 1
+                        maxLength: 1024
+                        description: Raw bank descriptor as it appeared on the statement. Required.
+                        type: string
+                        example: ALBERT HEIJN 1234 AMSTERDAM NL
+                      amount:
+                        description: Transaction amount. Negative = debit, positive = credit. Optional; it can help with transactions we cannot resolve from the description alone.
+                        type: number
+                        example: -12.34
+                      currency:
+                        minLength: 3
+                        maxLength: 3
+                        description: ISO-4217 three-letter currency code.
+                        type: string
+                        example: EUR
+                      mcc:
+                        minLength: 4
+                        maxLength: 4
+                        description: Merchant Category Code (4-digit ISO 18245). Optional; like amount, it can help with transactions we cannot resolve from the description alone.
+                        type: string
+                        example: '5411'
+                      country_hint:
+                        minLength: 2
+                        maxLength: 2
+                        description: ISO-3166 alpha-2 country code. Helps tell apart merchants that share a name in different countries.
+                        type: string
+                        example: NL
+                      merchant_name:
+                        maxLength: 256
+                        description: Pre-cleaned merchant name, if you already have one from your own processing.
+                        type: string
+                      bank_code_description:
+                        maxLength: 256
+                        description: Provider-supplied transaction-code label (e.g. SEPA RCT, ATM withdrawal).
+                        type: string
+                    example:
+                      descriptor: ALBERT HEIJN 1234 AMSTERDAM NL
+                      amount: -23.45
+                      currency: EUR
+                      country_hint: NL
+            example:
+              items:
+              - descriptor: ALBERT HEIJN 1234 AMSTERDAM NL
+                amount: -23.45
+                currency: EUR
+              - descriptor: KOSTEN BETAALPAS
+                amount: -1.5
+                currency: EUR
+      parameters:
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: force_refresh
+        required: false
+        description: 'When `true`, do not reuse an earlier answer for this descriptor: work it out again, and keep the new answer for later requests. If it resolves to a merchant, that merchant''s logo and details are refreshed in the background. Mutually exclusive with `cache_only=true`.'
+      - schema:
+          enum:
+          - high
+          - medium
+          - low
+          type: string
+        example: medium
+        in: query
+        name: min_confidence
+        required: false
+        description: 'Filter ready responses by `confidence_bucket`. When set and the result''s `confidence_bucket` is below the threshold (e.g. result=`low` with `min_confidence=high`), the response still includes the merchant block but with `meets_min_confidence: false`. Callers can either skip the result or relax the threshold and retry.'
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: cache_only
+        required: false
+        description: When `true`, we answer only from what we already know, and the call never sends data to our AI provider. Mutually exclusive with `force_refresh=true`.
+      - schema:
+          enum:
+          - 'true'
+          - 'false'
+          type: string
+        example: 'true'
+        in: query
+        name: wait_for_crawl
+        required: false
+        description: 'When `true` and the merchant is new to us, wait up to `wait_timeout_ms` for its logo to be found, then return it instead of `logo_url: null`. No effect for merchants we already know. On timeout, returns the normal response, which carries a lower-quality favicon when one is available.'
+      - schema:
+          type: string
+        example: '8000'
+        in: query
+        name: wait_timeout_ms
+        required: false
+        description: Upper bound in milliseconds for `wait_for_crawl` (default 8000, max 15000). Ignored unless `wait_for_crawl=true`.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - results
+                - processing_time_ms
+                properties:
+                  results:
+                    type: array
+                    items:
+                      description: One slot per submitted item, in submission order. A slot is either the full `POST /v1/enrich` response for that item or, when that one item could not be processed, the standard error envelope with `error` set to `item_failed`. Tell them apart by the presence of `error`, which no enrichment result carries.
+                      anyOf:
+                      - examples:
+                        - merchant:
+                            name: Albert Heijn
+                            parent: Ahold Delhaize
+                            parent_catalog_id: 9001
+                            domain: ah.nl
+                            logo_url: https://cdn.distyra.com/saas/142/a3f2b9e7d4c1f8a0/v1/light.png?token=…&expires=…
+                            logo_quality_score: 0.8
+                            logo_icon_url: https://cdn.distyra.com/saas/142/a3f2b9e7d4c1f8a0/v1/icon.png?token=…&expires=…
+                            logo_artwork_aspect: 3.42
+                            logo_artwork_luminance: 118
+                            brand_colors:
+                            - hex: '#0faeef'
+                              source: theme_color_meta
+                            catalog_id: 142
+                            source: catalog
+                            confidence_bucket: high
+                            crawl_started_at: '2026-04-10T08:13:42.000Z'
+                            crawl_attempts: 1
+                            created_at: '2025-12-01T00:00:00.000Z'
+                          category:
+                            primary: Retail & E-commerce
+                            secondary: supermarket
+                            source: catalog
+                          location:
+                            city: null
+                            postcode: null
+                            country: null
+                          metadata:
+                            is_subscription: false
+                            is_marketplace: false
+                            facilitator: null
+                            transaction_type: merchant_payment
+                            is_transfer: false
+                            is_bank_internal: false
+                            is_p2p: false
+                          confidence:
+                            merchant: 0.97
+                            category: 0.95
+                            transaction_type: 1
+                            overall: 0.96
+                          resolution:
+                            status: resolved
+                            proposed_name: null
+                            confidence: null
+                            retryable: false
+                            retry_after: null
+                            message: null
+                          alternatives: []
+                          trace_id: req-01HXYZ...
+                          cache_hit: true
+                          cache_tier: 1
+                          processing_time_ms: 2
+                          availability:
+                            merchant_identity: true
+                            transaction_type: true
+                            logos: true
+                            location: false
+                            subscription_detection: true
+                          livemode: true
+                        type: object
+                        required:
+                        - merchant
+                        - category
+                        - location
+                        - metadata
+                        - confidence
+                        - resolution
+                        - alternatives
+                        - trace_id
+                        - cache_hit
+                        - cache_tier
+                        - processing_time_ms
+                        - availability
+                        - livemode
+                        properties:
+                          merchant:
+                            type: object
+                            required:
+                            - name
+                            - parent
+                            - parent_catalog_id
+                            - domain
+                            - logo_url
+                            - logo_quality_score
+                            - logo_icon_url
+                            - logo_artwork_aspect
+                            - logo_artwork_luminance
+                            - brand_colors
+                            - catalog_id
+                            - source
+                            - confidence_bucket
+                            - crawl_started_at
+                            - crawl_attempts
+                            - created_at
+                            properties:
+                              name:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              parent:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              parent_catalog_id:
+                                anyOf:
+                                - type: integer
+                                - type: 'null'
+                              domain:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              logo_url:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              logo_quality_score:
+                                anyOf:
+                                - type: number
+                                - type: 'null'
+                              logo_icon_url:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              logo_artwork_aspect:
+                                anyOf:
+                                - type: number
+                                - type: 'null'
+                              logo_artwork_luminance:
+                                anyOf:
+                                - type: integer
+                                - type: 'null'
+                              brand_colors:
+                                type: array
+                                items:
+                                  type: object
+                                  required:
+                                  - hex
+                                  - source
+                                  properties:
+                                    hex:
+                                      description: 'Lowercase 6-digit hex, leading #.'
+                                      type: string
+                                    source:
+                                      description: theme_color_meta | msapplication_tile_meta | pixel_sample
+                                      type: string
+                              catalog_id:
+                                anyOf:
+                                - type: integer
+                                - type: 'null'
+                              source:
+                                description: 'How `merchant.name` was arrived at. **`descriptor` is the one value to branch on**: it means nothing was identified and `name` is your own descriptor handed back, tidied where we could, so the transaction still has something to render. It always comes with `availability.merchant_identity: false`, a null `catalog_id` and a null `confidence_bucket`; treat it as unenriched and do not store it as a merchant identity. **The other four all mean a merchant was identified**, and differ only in how: `catalog` a merchant from our curated catalogue, `crawl` a merchant identified from public sources, `fuzzy_match` a catalogue merchant whose name is close to but not exactly the one we saw, `llm_inferred` a name proposed by an AI model. Read `confidence_bucket` rather than ranking those four: they say how the answer was reached, not how good it is. `null` means no merchant block was served to describe. Treat the set as open and keep a default branch.'
+                                anyOf:
+                                - type: string
+                                  enum:
+                                  - catalog
+                                - type: string
+                                  enum:
+                                  - crawl
+                                - type: string
+                                  enum:
+                                  - fuzzy_match
+                                - type: string
+                                  enum:
+                                  - llm_inferred
+                                - type: string
+                                  enum:
+                                  - descriptor
+                                - type: 'null'
+                              confidence_bucket:
+                                anyOf:
+                                - type: string
+                                  enum:
+                                  - high
+                                - type: string
+                                  enum:
+                                  - medium
+                                - type: string
+                                  enum:
+                                  - low
+                                - type: 'null'
+                              crawl_started_at:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              crawl_attempts:
+                                minimum: 0
+                                type: integer
+                              created_at:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              meets_min_confidence:
+                                type: boolean
+                          category:
+                            description: 'Category labels for the resolved merchant. When the merchant is in our catalogue, `primary` is always its catalogue industry (even if null), so the label is stable however the merchant was identified. Labels proposed by an AI model appear only for a merchant not in our catalogue, marked `source: "llm"`.'
+                            type: object
+                            required:
+                            - primary
+                            - secondary
+                            - source
+                            properties:
+                              primary:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              secondary:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              source:
+                                description: 'Where the category labels came from. ''catalog'': the curated catalog row''s industry/subindustry (deterministic: the same merchant always returns the same category). ''llm'': labels proposed by an AI model for a merchant not yet in our catalogue, drawn from the same vocabulary but not yet reviewed by us. null: no category available.'
+                                anyOf:
+                                - type: string
+                                  enum:
+                                  - catalog
+                                - type: string
+                                  enum:
+                                  - llm
+                                - type: 'null'
+                          location:
+                            type: object
+                            required:
+                            - city
+                            - postcode
+                            - country
+                            properties:
+                              city:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              postcode:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              country:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                          metadata:
+                            type: object
+                            required:
+                            - is_subscription
+                            - is_marketplace
+                            - facilitator
+                            - transaction_type
+                            - country_matching
+                            - type_unavailable
+                            - is_transfer
+                            - is_bank_internal
+                            - is_p2p
+                            - counterparty_role
+                            - statutory_kind
+                            properties:
+                              is_subscription:
+                                description: 'Merchant-category hint: true when the resolved merchant predominantly bills on subscription (streaming, SaaS, telco, gym, insurance). This reflects the merchant, not this transaction: a single charge at a subscription merchant may still be a one-off. True only for conservatively curated brands. Null means no merchant resolved, so there was no catalog row to consult; false means a row resolved and is not on the curated list. Before 2026-07-16 the unresolved case also reported false, which asserted a negative we had no basis for. Per-account recurrence detection needs the transaction series and lives in the banking/iOS layer, not this stateless API.'
+                                anyOf:
+                                - type: boolean
+                                - type: 'null'
+                              is_marketplace:
+                                type: boolean
+                              facilitator:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              transaction_type:
+                                description: 'bank_fee | internal_transfer | p2p_transfer | cash_withdrawal | cash_deposit | investment_transfer | salary | refund | direct_debit | standing_order | returned_dd | merchant_payment. "merchant_payment" is the ordinary-purchase verdict: no other transaction type applied, and a merchant or category was identified, so this is a normal payment to a business. Null means genuinely undetermined (nothing resolved). Before 2026-07-16 ordinary purchases reported null at confidence 0, indistinguishable from "no idea", while the docs advertised a "merchant_payment" value that was not in the enum and could never be returned.'
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              country_matching:
+                                description: 'Whether country-constrained matching was available for this request. It describes the request rather than the answer, and that distinction is the point: `constrained` reflects the `country_hint` you sent, not a country inferred from the descriptor text. A descriptor ending in a country code may still constrain matching while this reads false, because the advice being given is about what your integration can change. Why it exists: without a country, a same-named merchant in another country can win, and nothing used to say so. A German consumer statement sent with no hint resolved to .fi, .at, .ie, .pl and .nl domains. It is returned on both paths, so a client can read it unconditionally.'
+                                type: object
+                                required:
+                                - constrained
+                                - advisory
+                                properties:
+                                  constrained:
+                                    description: True when this request supplied `country_hint`, so matching could prefer a merchant in that country over a same-named one elsewhere. False when it did not.
+                                    type: boolean
+                                  advisory:
+                                    description: A sentence when `constrained` is false, null when it is true. Read the boolean rather than testing whether this object is present, because the object is returned on every response.
+                                    anyOf:
+                                    - type: string
+                                    - type: 'null'
+                              type_unavailable:
+                                description: "Why `transaction_type` is null, or null when a type was determined. A bare null type is indistinguishable from \"we tried and failed\", and the two need different responses from you. \n\nEach reason describes this transaction, not your bank in general. One row without a transaction code does not establish that a bank never sends them, so aggregate across many transactions before concluding anything about an institution."
+                                anyOf:
+                                - type: object
+                                  required:
+                                  - reason
+                                  - retryable
+                                  properties:
+                                    reason:
+                                      enum:
+                                      - transient_failure
+                                      - bank_sent_no_type_data
+                                      - no_type_data_supplied
+                                      - bank_code_unrecognised
+                                      - no_rule_matched
+                                      description: 'transient_failure: enrichment failed transiently; see `resolution` and retry. bank_sent_no_type_data: we read this transaction from the bank and it carried no transaction code of any kind, neither a text description nor a structured ISO 20022 or proprietary code, and no MCC, so there was nothing to determine a type from. no_type_data_supplied: you sent neither bank_code_description nor mcc and we did not read the record ourselves, so we cannot tell whether your bank provides them. Where your bank provides a bank_code_description, sending it is the most reliable way to get a type. bank_code_unrecognised: a transaction code reached us, from you or from the bank record itself, and we do not decode it yet. That is our gap, not your bank''s; tell us the code and we will add it. no_rule_matched: the transaction carried type information we understood, but it did not establish a type, and no merchant or category was identified.'
+                                      type: string
+                                    retryable:
+                                      description: True only for transient_failure. Every other reason is a settled answer for this transaction.
+                                      type: boolean
+                                - type: 'null'
+                              is_transfer:
+                                type: boolean
+                              is_bank_internal:
+                                type: boolean
+                              is_p2p:
+                                type: boolean
+                              counterparty_role:
+                                description: '**What this counterparty is to the account holder**, when the resolved catalog row is tagged. Null when it is not, which is the common case: tagging is curated per row and ordinary merchants are deliberately untagged.
+
+
+                                  **Null does not mean "not one of these".** It means we hold no curated claim either way, and the two should not be presented the same way to anyone making a decision.
+
+
+                                  Carried over from the business profile: `tax_authority` a tax or revenue body, refined by `statutory_kind` when it is really a social-charge body; `lender` a credit provider, excluding mortgages which are separate below; `internal_transfer` another account of the holder''s own.
+
+
+                                  Business-side: `customer` pays the holder for goods or services; `supplier` is paid by them for the same; `payment_processor` settles card or platform takings, so money arriving from one is usually revenue that has already been earned; `employee` is paid wages by the holder.
+
+
+                                  Consumer-side, added 2026-08-12: `employer` pays the holder wages, the inverse of `employee`, and the direction is the whole meaning; `benefits_agency` pays state benefits, kept separate from `employer` because some lenders may not count benefits toward affordability; `pension_provider`; `landlord`; `mortgage_provider`, separate from `lender` because housing cost is treated differently from unsecured credit in every market we surveyed; `utility`; `insurer`; `childcare`; `alimony_recipient`; `education`.
+
+
+                                  **No value here names a health condition, a religion, a political opinion or any other GDPR Article 9 special category**, and none will be added that does. That is a deliberate property rather than a coincidence: it is what lets a transaction suppressed as special-category keep its role, and `benefits_agency` names a payer rather than a reason for payment for the same reason.
+
+
+                                  **Five of the seventeen have catalog rows today** (measured 2026-10-06: `tax_authority` 159, `lender` 74, `payment_processor` 21, `benefits_agency` 8, `mortgage_provider` 4). The other twelve are published and currently return for nothing. They are listed because the vocabulary is the contract and a value appearing later must not be a surprise, not because coverage is implied.
+
+
+                                  **Treat it as an open enum**: switch on what you know and keep a default branch. A new role ships in `/v1` without a version bump; a role is never **removed** from it in place.'
+                                examples:
+                                - tax_authority
+                                anyOf:
+                                - type: string
+                                  enum:
+                                  - tax_authority
+                                - type: string
+                                  enum:
+                                  - lender
+                                - type: string
+                                  enum:
+                                  - internal_transfer
+                                - type: string
+                                  enum:
+                                  - customer
+                                - type: string
+                                  enum:
+                                  - supplier
+                                - type: string
+                                  enum:
+                                  - payment_processor
+                                - type: string
+                                  enum:
+                                  - employee
+                                - type: string
+                                  enum:
+                                  - employer
+                                - type: string
+                                  enum:
+                                  - benefits_agency
+                                - type: string
+                                  enum:
+                                  - pension_provider
+                                - type: string
+                                  enum:
+                                  - landlord
+                                - type: string
+                                  enum:
+                                  - mortgage_provider
+                                - type: string
+                                  enum:
+                                  - utility
+                                - type: string
+                                  enum:
+                                  - insurer
+                                - type: string
+                                  enum:
+                                  - childcare
+                                - type: string
+                                  enum:
+                                  - alimony_recipient
+                                - type: string
+                                  enum:
+                                  - education
+                                - type: 'null'
+                              statutory_kind:
+                                description: 'Refines a `counterparty_role` of `tax_authority` into **which statutory charge** it collects, so a social contribution is not reported as general taxation. Null on every other role, and null on a tax authority we hold no refinement for.
+
+
+                                  `social_security` a general social-insurance body; `health` a health-insurance contribution; `pension` a state or mandatory occupational scheme; `accident` statutory accident or injury insurance; `sectoral` an industry-specific mandatory fund; `social_secretariat` an intermediary that collects on a body''s behalf, which is a payee rather than the charge itself; `other` a statutory charge that is none of the above.
+
+
+                                  **It names the charge, not a condition.** `health` is a health-insurance contribution that nearly everyone in the relevant country pays; it says nothing about the account holder''s health and is not a GDPR Article 9 special category. Curated per row, not inferred from the industry taxonomy, which collapsed the statutory subindustries into broad ones shared with commercial entities in June 2026.
+
+
+                                  **Treat it as an open enum**, as with `counterparty_role`.'
+                                examples:
+                                - social_security
+                                anyOf:
+                                - type: string
+                                  enum:
+                                  - health
+                                - type: string
+                                  enum:
+                                  - pension
+                                - type: string
+                                  enum:
+                                  - accident
+                                - type: string
+                                  enum:
+                                  - sectoral
+                                - type: string
+                                  enum:
+                                  - social_secretariat
+                                - type: string
+                                  enum:
+                                  - social_security
+                                - type: string
+                                  enum:
+                                  - other
+                                - type: 'null'
+                          confidence:
+                            type: object
+                            required:
+                            - merchant
+                            - category
+                            - transaction_type
+                            - overall
+                            properties:
+                              merchant:
+                                anyOf:
+                                - type: number
+                                - type: 'null'
+                              category:
+                                anyOf:
+                                - type: number
+                                - type: 'null'
+                              transaction_type:
+                                type: number
+                              overall:
+                                type: number
+                          resolution:
+                            description: Structured reason for the resolution outcome, so callers can act on null results.
+                            type: object
+                            required:
+                            - status
+                            - proposed_name
+                            - confidence
+                            - retryable
+                            - retry_after
+                            - message
+                            properties:
+                              status:
+                                enum:
+                                - resolved
+                                - unresolved_unknown
+                                - low_signal_descriptor
+                                - below_mint_threshold
+                                - timed_out
+                                - transient_error
+                                - rate_limited
+                                description: 'resolved: a merchant or non-merchant transaction_type was resolved. unresolved_unknown: we could not identify the merchant. low_signal_descriptor: the descriptor was too thin to resolve, so send the fuller statement form. below_mint_threshold: we found a possible merchant name, but not with enough confidence to report it as identified (see proposed_name/confidence). timed_out / transient_error: a transient failure during identification. Retryable, not a verdict. rate_limited: merchant identification is paused by a safeguard, so this response carries a cleaned descriptor without a newly identified merchant. The request itself still succeeds with 200. Retryable: retry_after gives the seconds until it clears, and message a sentence you can show a user. Ordinary use does not reach it, and sustained request rates are governed separately and answer 429.'
+                                type: string
+                              proposed_name:
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                              confidence:
+                                anyOf:
+                                - type: number
+                                - type: 'null'
+                              retryable:
+                                description: true for timed_out / transient_error / rate_limited. Retry the same request; the null is transient, not a definitive "unknown". When retry_after is set, wait that long first.
+                                type: boolean
+                              retry_after:
+                                description: 'Seconds after which retrying the same descriptor is worthwhile, or null when it is not. Set when an unknown merchant triggered background discovery: the system is fetching + confirming the brand, so the descriptor typically resolves after this delay (eventual consistency). Also set on rate_limited, where it is the seconds until the protective limit clears and retrying before it will hit the same thing. Retry once after this many seconds, or just let your next natural re-sync pick it up. null = a definitive non-result, no retry will help.'
+                                anyOf:
+                                - minimum: 0
+                                  type: integer
+                                - type: 'null'
+                              message:
+                                description: 'A short human-readable sentence you can surface to a user, or null. Populated only where `status` alone cannot convey what to do about it: today that is rate_limited, where it says what is degraded and how long for. `status` remains the machine-readable contract; do not branch on this string.'
+                                anyOf:
+                                - type: string
+                                - type: 'null'
+                          alternatives:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                              - name
+                              - confidence
+                              properties:
+                                name:
+                                  type: string
+                                confidence:
+                                  type: number
+                          trace_id:
+                            type: string
+                          cache_hit:
+                            type: boolean
+                          cache_tier:
+                            minimum: 0
+                            maximum: 4
+                            description: 'An opaque indicator of how this answer was produced. **It is not a quality, accuracy, or confidence signal and its values carry no ordering**: a higher number is not a better answer. **Do not branch on it.** To tell whether a merchant was identified, read availability.merchant_identity or merchant.source; for confidence, read confidence.merchant or merchant.confidence_bucket.'
+                            type: integer
+                          processing_time_ms:
+                            minimum: 0
+                            type: integer
+                          availability:
+                            description: 'Per-request summary of what this one response actually yielded. Changed in 0.8.0: merchant_identity/transaction_type/logos used to be build-time constants meaning "the feature has shipped", hardcoded true on every response, which contradicted the payload (merchant_identity:true beside merchant.name:null). They now report what you actually got. Changed in 0.9.0: merchant_identity is no longer equivalent to `merchant.name !== null`. When nothing resolves, merchant.name now carries your own descriptor back (merchant.source = "descriptor") so the transaction still has something to display, and merchant_identity stays false. Branch on merchant_identity or merchant.source, not on the presence of a name.'
+                            type: object
+                            required:
+                            - merchant_identity
+                            - transaction_type
+                            - logos
+                            - location
+                            - subscription_detection
+                            properties:
+                              merchant_identity:
+                                description: '**True when a merchant was identified**, whether one already in our catalogue or one newly proposed. **Not the same as merchant.name being populated.** When nothing resolves, merchant.name carries your own descriptor back (merchant.source = "descriptor") and this stays false.'
+                                type: boolean
+                              transaction_type:
+                                description: 'True when metadata.transaction_type is populated. Distinct from merchant_identity: a bank fee can be typed with no merchant identified.'
+                                type: boolean
+                              logos:
+                                description: True when merchant.logo_url is populated on this response.
+                                type: boolean
+                              location:
+                                description: True when this descriptor yielded a city or country.
+                                type: boolean
+                              subscription_detection:
+                                description: True when a catalog row resolved, so its subscription flag was available to consult. Equivalently, metadata.is_subscription is not null.
+                                type: boolean
+                          livemode:
+                            description: true when served to a live key; false when served to a test-mode (sk_test_) key. Test-mode responses are enriched the same way but carry no billing or quota impact.
+                            type: boolean
+                        additionalProperties: true
+                      - description: Standard error envelope used for all non-2xx responses.
+                        examples:
+                        - error: invalid_key
+                          detail: API key not recognized or revoked.
+                        - error: rate_limited
+                          detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                          scope: burst
+                          retry_after_seconds: 1
+                          max: 20
+                        type: object
+                        required:
+                        - error
+                        properties:
+                          error:
+                            description: Stable machine-readable code. SDK consumers should switch on this.
+                            examples:
+                            - invalid_key
+                            - rate_limited
+                            - insufficient_scope
+                            type: string
+                          detail:
+                            description: Free-form human-readable explanation. Safe to surface.
+                            type: string
+                          request_id:
+                            description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                            type: string
+                          scope:
+                            description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                            anyOf:
+                            - type: string
+                              enum:
+                              - burst
+                            - type: string
+                              enum:
+                              - sustained
+                          retry_after_seconds:
+                            description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                            type: integer
+                          max:
+                            description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                            type: integer
+                        additionalProperties: true
+                  processing_time_ms:
+                    type: integer
+        '400':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '402':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '422':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+  /v1/enrich/batch/async:
+    post:
+      operationId: enrichBatchAsync
+      summary: Submit a large batch for background enrichment
+      tags:
+      - Enrichment
+      description: 'Accepts up to 10000 items and returns 202 with a job id. Track progress via GET /v1/enrich/batch/async/{id} or subscribe to the `batch.completed` / `batch.failed` webhook events. Per-item failures surface inside the result array on completion; one bad row never fails the whole batch. Pre-debited at submission time at the same rate as the synchronous /v1/enrich/batch endpoint.
+
+
+        **Our AI provider.** To identify a merchant, or to check that a merchant we identified matches the transaction, we may send the transaction to our AI provider, an EU sub-processor under a zero-retention, no-training agreement, together with its amount, currency, MCC and country. This endpoint has no `cache_only`; to prevent it, use POST /v1/enrich/batch with `cache_only=true`.
+
+
+        **Retention.** The transactions you submit are discarded as soon as the batch reaches a terminal state, since they are needed only while it runs. The result stays fetchable until `expires_at`, 24 hours after submission, after which the row flips to `expired` and the result is gone too. Fetch results you need to keep, or subscribe to `batch.completed` and store them your side.
+
+
+        **Required scope:** `enrichment:write`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - items
+              properties:
+                items:
+                  minItems: 1
+                  maxItems: 10000
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - descriptor
+                    properties:
+                      descriptor:
+                        minLength: 1
+                        maxLength: 1024
+                        type: string
+                      amount:
+                        type: number
+                      currency:
+                        minLength: 3
+                        maxLength: 3
+                        type: string
+                      mcc:
+                        minLength: 4
+                        maxLength: 4
+                        type: string
+                      country_hint:
+                        minLength: 2
+                        maxLength: 2
+                        type: string
+                      merchant_name:
+                        maxLength: 256
+                        type: string
+                      bank_code_description:
+                        maxLength: 256
+                        type: string
+      security:
+      - bearerAuth: []
+      responses:
+        '202':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - status
+                - item_count
+                - submitted_at
+                - expires_at
+                - status_url
+                properties:
+                  id:
+                    format: uuid
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                  item_count:
+                    type: integer
+                  submitted_at:
+                    format: date-time
+                    type: string
+                  expires_at:
+                    format: date-time
+                    type: string
+                  status_url:
+                    description: Path to poll for this batch, relative to the API base URL.
+                    type: string
+                    example: /v1/enrich/batch/async/0f8b1c2e-...
+        '400':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '402':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '422':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+  /v1/enrich/batch/async/{id}:
+    get:
+      operationId: enrichBatchAsyncStatus
+      summary: Get status + result of a submitted async batch
+      tags:
+      - Enrichment
+      description: 'Returns the current state of a previously-submitted async batch. While `pending`/`running`, `result` is null. On `completed`, `result` holds the same shape as POST /v1/enrich/batch (one entry per submitted item, in the same order). On `failed`, `error` carries the terminal reason.
+
+
+        **Retention.** The transactions you submitted are discarded as soon as the batch reaches a terminal state, since they are needed only while it runs. The `result` stays fetchable until `expires_at`, 24 hours after submission, after which the row flips to `expired` and the result is gone too. Fetch results you need to keep, or subscribe to `batch.completed` and store them your side.
+
+
+        **Required scope:** `enrichment:read`.'
+      parameters:
+      - schema:
+          format: uuid
+          type: string
+        in: path
+        name: id
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - status
+                - item_count
+                - completed_count
+                - failed_count
+                - submitted_at
+                - started_at
+                - completed_at
+                - expires_at
+                - result
+                - error
+                properties:
+                  id:
+                    format: uuid
+                    type: string
+                  status:
+                    anyOf:
+                    - type: string
+                      enum:
+                      - pending
+                    - type: string
+                      enum:
+                      - running
+                    - type: string
+                      enum:
+                      - completed
+                    - type: string
+                      enum:
+                      - failed
+                    - type: string
+                      enum:
+                      - expired
+                  item_count:
+                    type: integer
+                  completed_count:
+                    type: integer
+                  failed_count:
+                    type: integer
+                  submitted_at:
+                    format: date-time
+                    type: string
+                  started_at:
+                    anyOf:
+                    - format: date-time
+                      type: string
+                    - type: 'null'
+                  completed_at:
+                    anyOf:
+                    - format: date-time
+                      type: string
+                    - type: 'null'
+                  expires_at:
+                    format: date-time
+                    type: string
+                  result:
+                    anyOf:
+                    - type: array
+                      items:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
+                    - type: 'null'
+                  error:
+                    anyOf:
+                    - type: string
+                    - type: 'null'
+        '401':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '403':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '404':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '429':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '500':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+        '503':
+          description: Standard error envelope used for all non-2xx responses.
+          content:
+            application/json:
+              schema:
+                description: Standard error envelope used for all non-2xx responses.
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    description: Stable machine-readable code. SDK consumers should switch on this.
+                    type: string
+                    example: invalid_key
+                  detail:
+                    description: Free-form human-readable explanation. Safe to surface.
+                    type: string
+                  request_id:
+                    description: Server-generated request id (also returned as the X-Request-Id header). Quote it when contacting support to correlate a failed call with server logs. Present on errors surfaced by the global error handler.
+                    type: string
+                  scope:
+                    description: '429 only. Which window tripped: `burst` (per-second) or `sustained` (per-minute average).'
+                    anyOf:
+                    - type: string
+                      enum:
+                      - burst
+                    - type: string
+                      enum:
+                      - sustained
+                  retry_after_seconds:
+                    description: On a 429, and on a 503 `bank_unavailable` from Connect. Seconds to wait before retrying. Mirrors the `Retry-After` header for clients that would rather not parse headers.
+                    type: integer
+                  max:
+                    description: 429 only. The limit that was exceeded, in the units of `scope` (requests/second for `burst`, requests/minute for `sustained`).
+                    type: integer
+              examples:
+                example1:
+                  value:
+                    error: invalid_key
+                    detail: API key not recognized or revoked.
+                example2:
+                  value:
+                    error: rate_limited
+                    detail: Burst rate limit exceeded (20 requests/sec). Retry after 1s.
+                    scope: burst
+                    retry_after_seconds: 1
+                    max: 20
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_<32 base58 chars>

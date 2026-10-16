@@ -1,0 +1,13 @@
+generated: '2026-10-16'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.distyra.eu/changelog
+sources:
+- https://www.distyra.eu/changelog
+versioning: {}
+deprecation:
+  policy: Breaking changes ship as a new version with at least 12 months' notice.
+  notice_period: 12 months
+note: No explicit version naming method, sunset/deprecation headers, SLA statement, or status page URL were found in the provided page.
+status_page: null
+docs: https://www.distyra.eu/changelog

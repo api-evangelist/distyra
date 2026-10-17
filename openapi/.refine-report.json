@@ -1,7 +1,7 @@
 {
   "provider": "distyra",
   "sources": [
-    "distyra-openapi.json"
+    "_original/distyra-openapi.json"
   ],
   "outputs": [
     "distyra-authentication-api-openapi.yml",
@@ -14,16 +14,25 @@
     "distyra-underwriting-api-openapi.yml",
     "distyra-webhooks-api-openapi.yml"
   ],
-  "archived": [
-    "archived openapi/distyra-openapi.json"
-  ],
+  "archived": [],
   "errors": [],
   "warnings": [],
   "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
     "distyra-openapi.json: upgraded openapi 3.0.3 -> OpenAPI 3.2.0",
     "distyra-openapi.json: declared missing tag: authentication",
     "distyra-openapi.json: declared missing tag: billing",
-    "apis.yml register: written (+9 apis, 9 total)"
+    "apis.yml register: already-registered"
   ],
-  "skipped": []
+  "skipped": [
+    "distyra-authentication-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-billing-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-catalog-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-connect-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-enrichment-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-feedback-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-system-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-underwriting-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "distyra-webhooks-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
 }

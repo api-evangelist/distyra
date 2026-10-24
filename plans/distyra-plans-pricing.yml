@@ -63,3 +63,53 @@ plans:
   price_text: Custom pricing, sized to your volume.
   description: Per applicant analysed, not per API call.
 docs: https://www.distyra.eu/pricing
+x-canonical:
+  generated: '2026-10-23'
+  vocabulary: all/0-working/economics/plans-canonical.yml
+  models:
+  - free
+  - subscription
+  units: []
+  plans:
+  - name: Free
+    access: other
+    model: free
+    model_how: derived
+    units: []
+    periods: []
+  - name: Business
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods: []
+  - name: Wholesale
+    access: other
+    model: unstated
+    model_how: derived
+    units: []
+    periods: []
+  - name: Pay as you go
+    access: other
+    model: free
+    model_how: derived
+    units: []
+    periods: []
+  - name: Growth
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods: []
+  - name: Enterprise
+    access: other
+    model: unstated
+    model_how: derived
+    units: []
+    periods: []
+  - name: Underwriting
+    access: other
+    model: unstated
+    model_how: derived
+    units: []
+    periods: []

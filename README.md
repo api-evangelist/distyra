@@ -64,5 +64,135 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-Brightfield Software is a company surfaced via the API Evangelist harvest backlog (source: g2-catalog) and added to the network as a stub for full-pipeline profiling.
-- https://distyra.eu/
+Brightfield Software, operating under the Distyra brand, provides European bank data APIs that deliver raw transaction information distilled into actionable signals. Their platform offers products for data enrichment, underwriting, and compliance, tailored to European payment formats and regulations. Built in the EU, Distyra ensures data residency and privacy, supporting developers with comprehensive documentation, pricing plans, and a status page. The service aims to simplify access to bank data for fintech applications, offering a free tier and enterprise options.
+
+**Areas:** Company · Banking · Fintech · European
+
+## Brightfield Software on APIs.io
+
+Everything profiled for Brightfield Software is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/distyra/](https://apis.io/providers/distyra/)** — or go straight to one of the APIs or properties below.
+
+### APIs (9)
+
+- [Brightfield Software Authentication API](https://apis.io/apis/distyra/distyra-authentication-api/) — The authentication API from Brightfield Software — 1 operation(s) for authentication.
+- [Brightfield Software Billing API](https://apis.io/apis/distyra/distyra-billing-api/) — The billing API from Brightfield Software — 2 operation(s) for billing.
+- [Brightfield Software Catalog API](https://apis.io/apis/distyra/distyra-catalog-api/) — Read access to merchant catalog + taxonomy
+- [Brightfield Software Connect API](https://apis.io/apis/distyra/distyra-connect-api/) — Live PSD2/AIS bank connections (Distyra Connect). Fetch normalized transactions from a bank account on demand. Nothing is stored. `mode` says whose account…
+- [Brightfield Software Enrichment API](https://apis.io/apis/distyra/distyra-enrichment-api/) — Single + batch enrichment
+- [Brightfield Software Feedback API](https://apis.io/apis/distyra/distyra-feedback-api/) — Customer corrections + confirmations
+- [Brightfield Software System API](https://apis.io/apis/distyra/distyra-system-api/) — Health, version, status
+- [Brightfield Software Underwriting API](https://apis.io/apis/distyra/distyra-underwriting-api/) — Applicant-level underwriting feature layer: turnover, recurring revenue, debt service, customer concentration, tax payments, statutory contributions.…
+- [Brightfield Software Webhooks API](https://apis.io/apis/distyra/distyra-webhooks-api/) — Webhook endpoint management (register, list, rotate signing secret). What arrives at your URL is the `WebhookDelivery` schema: the envelope, the fields on…
+
+### Published properties
+
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
+
+#### Agentic access (1)
+
+Which operations an agent can call, which act, and which need a human in the loop.
+
+- [Distyra Agentic Access](https://apis.io/agentic-access/distyra/distyra-agentic-access/)
+
+#### JSON-LD (1)
+
+Linked-data contexts for the provider's vocabulary.
+
+- [Distyra Context](https://apis.io/jsonld/distyra/distyra-context/)
+
+#### Overlays (1)
+
+OpenAPI overlays, including conversational phrasing for each operation.
+
+- [Distyra Openapi Overlay](https://apis.io/overlays/distyra/distyra-openapi-overlay/)
+
+#### Governance rules (1)
+
+Spectral rulesets for the provider's contracts.
+
+- [Brightfield Software API Rules](https://apis.io/rules/distyra/distyra-rules/)
+
+#### Security (3)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Distyra Authentication](https://apis.io/security/distyra/distyra-authentication/)
+- [Distyra Domain Security](https://apis.io/security/distyra/distyra-domain-security/)
+- [Distyra Vulnerability Disclosure](https://apis.io/security/distyra/distyra-vulnerability-disclosure/)
+
+#### Plans and pricing (1)
+
+Published plans, tiers and prices.
+
+- [Distyra Plans Pricing](https://apis.io/plans/distyra/distyra-plans-pricing/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://distyra.eu/)
+- [Documentation](https://www.distyra.eu/developers)
+- [Getting started](https://www.distyra.eu/get-started)
+- [API reference](https://www.distyra.eu/reference)
+- [Pricing](https://www.distyra.eu/pricing)
+- [Support](https://www.distyra.eu/contact)
+- [Changelog](https://www.distyra.eu/changelog)
+- [Security](https://www.distyra.eu/security)
+- [Terms of service](https://www.distyra.eu/tos)
+- [Privacy policy](https://www.distyra.eu/privacy-policy)
+- [Status](https://www.distyra.eu/status)
+
+## API Evangelist rating
+
+**Kin Score 54.7** — strong · rubric 0.25.0 · scored 2026-10-23
+
+| Facet | Score |
+|---|---|
+| Discoverability | 57.1 |
+| Contract quality | 56.0 |
+| Contract governance | 35.6 |
+| Operational transparency | 50.0 |
+| Developer ergonomics | 54.2 |
+| Access clarity | 63.2 |
+
+**Agent readiness 28.1** — agent-aware
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | derived (partial credit) |
+| Reversibility Documented | — |
+| MCP Server | — |
+| Auth Clarity | bearer (partial credit) |
+| Idempotency | — |
+| Error Semantics | derived (partial credit) |
+| OpenAPI Examples | verified |
+| Rate Limit Signal | — |
+| Event Surface Described | — |
+| Agent Skills | derived (partial credit) |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+| Pagination Ratio | paginated |
+| Operation Distinctiveness | distinct |
+
+**Regulatory alignment 29.9** — Banking & Open Finance
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/distyra/](https://apis.io/providers/distyra/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for Brightfield Software: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/distyra/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
